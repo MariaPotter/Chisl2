@@ -1,31 +1,11 @@
 {
   "tests": [
     {
-      "name": "Корректные аргументы. Возвращаемое значение",
-      "setup": "make test",
-      "run": ".github/test_ret_val.sh 0 2",
-      "input": "",
-      "output": "",
-      "comparison": "included",
-      "timeout": 10,
-      "points": 20
-    },
-    {
-      "name": "Корректный запуск. Корректные аргументы.",
-      "setup": "make test",
-      "run": "./main 1",
-      "input": "",
-      "output": "Func 1.a",
-      "comparison": "included",
-      "timeout": 10,
-      "points": 30
-    },
-    {
       "name": "Корректный запуск.",
-      "setup": "make test",
+      "setup": "make",
       "run": "./main",
       "input": "",
-      "output": "Func 4.b",
+      "output": "Alpha:",
       "comparison": "included",
       "timeout": 360,
       "points": 50

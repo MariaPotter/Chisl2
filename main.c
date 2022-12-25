@@ -310,7 +310,6 @@ void shooting_method(unsigned int max_iterations,
     A[0] = (double*)malloc (2*sizeof(double));
     A[1] = (double*)malloc (2*sizeof(double));
     double* B = (double*)malloc (2*sizeof(double));
-    double* C = (double*)malloc (2*sizeof(double));
     double delta = pow(10, -6);
     double temp_alpha[2];
 
@@ -319,15 +318,17 @@ void shooting_method(unsigned int max_iterations,
         temp_alpha[0] = err[0];  // y
         temp_alpha[1] = err[1];  // px
         error(T, x, alpha_1-delta, alpha_2, py, err, p, s, k, cab, tol, f, g, u, v, mult);
-        A[0][0] = (temp_alpha[0]-err[0])/(2*delta);
-        A[1][0] = (temp_alpha[1]-err[1])/(2*delta);
+        printf("\n%.7e    %.7e    %.7e\n",temp_alpha[0], err[0], (temp_alpha[0]-err[0])/delta);
+        printf("%.7e    %.7e    %.7e\n\n",temp_alpha[1], err[1], (temp_alpha[1]-err[1])/delta);
+        A[0][0] = (temp_alpha[0]-err[0])*(0.5/delta);
+        A[1][0] = (temp_alpha[1]-err[1])*(0.5/delta);
 
         error(T, x, alpha_1, alpha_2+delta, py, err, p, s, k, cab, tol, f, g, u, v, mult);
         temp_alpha[0] = err[0];  // y
         temp_alpha[1] = err[1];  // px
         error(T, x, alpha_1, alpha_2-delta, py, err, p, s, k, cab, tol, f, g, u, v, mult);
-        A[0][1] = (temp_alpha[0]-err[0])/(2*delta);
-        A[1][1] = (temp_alpha[1]-err[1])/(2*delta);
+        A[0][1] = (temp_alpha[0]-err[0])*(0.5/delta);
+        A[1][1] = (temp_alpha[1]-err[1])*(0.5/delta);
 
         error(T, x, alpha_1, alpha_2, py, err, p, s, k, cab, tol, f, g, u, v, mult);
         B[0] = err[0];  //y
@@ -342,12 +343,9 @@ void shooting_method(unsigned int max_iterations,
         }
         
         printf("Shooting iteration: %ud,\nAlpha: %.3f,\nX(0)=%.3e,\nY(0)=%.3e,\nDiscrepancy: %.3e\n\n", iteration, mult,alpha_1,alpha_2,sqrt(pow(B[0],2)+pow(B[1],2)));
-        
-        C[0]=B[0]-A[0][0]*alpha_1-A[0][1]*alpha_2;
-        C[1]=B[1]-A[1][0]*alpha_1-A[1][1]*alpha_2;
 
-        alpha_1 = (A[1][1]*C[0]-A[0][1]*C[1])/(A[1][0]*A[0][1]-A[0][0]*A[1][1]);
-        alpha_2 = (A[1][1]*C[1]-A[0][1]*C[0])/(A[1][0]*A[0][1]-A[0][0]*A[1][1]);
+        alpha_1 += (A[0][0]*B[0]-A[1][0]*B[1])/(A[1][0]*A[0][1]-A[0][0]*A[1][1]);
+        alpha_2 += (A[0][0]*B[1]-A[1][0]*B[0])/(A[1][0]*A[0][1]-A[0][0]*A[1][1]);
                 
         //changing alpha_1, alpha_2
     }
@@ -355,7 +353,6 @@ void shooting_method(unsigned int max_iterations,
     free (A[1]);
     free (A);
     free (B);
-    free (C);
 }
 
 int main()
