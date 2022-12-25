@@ -1,0 +1,19 @@
+name: Lint
+
+on: [push, pull_request]
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Install checkers
+        run: sudo apt-get install -y clang-tidy clang-format cppcheck
+        
+      - name: Checking permissitions
+        run: sudo chmod -R 755 .github/*.sh
+
+      - name: Проверка
+        run: .github/lint.sh

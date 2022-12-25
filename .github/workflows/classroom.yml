@@ -1,0 +1,15 @@
+    name: GitHub Classroom Workflow
+
+    on: [push]
+  
+    jobs:
+      build:
+        runs-on: ubuntu-latest
+
+        steps:
+          - uses: actions/checkout@v2
+
+          - name: Checking permissitions
+            run: sudo chmod -R 755 .github/*.sh
+
+          - uses: education/autograding@v1
