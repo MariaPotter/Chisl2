@@ -3,7 +3,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <time.h>
-#define pi 3.14159265359
+#define pi 3.14159265358979323846264338328
 
 _Pragma ("GCC diagnostic push")
 _Pragma ("GCC diagnostic ignored \"-Wunused-parameter\"")
@@ -98,14 +98,14 @@ void RK (double t,
 			temp_py += cab[i + 1][j] * k[3][j];
         }
         // printf("%f\n",f(1,0));
-        k[0][i] = g (t + h * cab[0][i],
+        k[0][i] = f (t + h * cab[0][i],
 					*x0 + h * temp_x,
 					*y0 + h * temp_y,
 					*px0 + h * temp_px,
 					*py0 + h * temp_py,
                     mult);
 					
-        k[1][i] = f (t + h * cab[0][i],
+        k[1][i] = g (t + h * cab[0][i],
 					*x0 + h * temp_x,
 					*y0 + h * temp_y,
 					*px0 + h * temp_px,
@@ -203,7 +203,7 @@ double astep (double T,
 	
     // printf("%.2e    %.6e  |  %.6e    %.2e\n", *x, *y, *px, *py);
 	
-    for (*i = *j = 0; T - dist > pow(10,-17);)
+    for (*i = *j = 0; T - dist > tol*pow(10,-2);)
     {   
         
         if (dist + h > T) h = T - dist;
@@ -213,6 +213,7 @@ double astep (double T,
         
         
         norm = fmax( fmax( fabs (temp_x - *x_), fabs (temp_y - *y_)), fmax(fabs (temp_px - *px_), fabs (temp_py - *py_)));
+        norm = sqrt(pow(temp_x - *x_,2)+pow(temp_y - *y_,2)+pow(temp_px - *px_,2)+pow(temp_py - *py_,2));
         temp = h;
         h *= fmin (fac,
                    fmax (0.7,
@@ -355,17 +356,23 @@ void shooting_method(unsigned int max_iterations,
         B[0] = err[0];  //y
         B[1] = err[1];  //px
         
-        printf("%.2e    %.2e  |  %.2e\n%.2e    %.2e  |  %.2e\n", A[0][0], A[0][1], B[0], A[1][0], A[1][1], B[1]);
+        // printf("%10.2e    %10.2e  |  %10.2e\n%10.2e    %10.2e  |  %10.2e\n", A[0][0], A[0][1], B[0], A[1][0], A[1][1], B[1]);
         
-        if(sqrt(pow(B[0],2)+pow(B[1],2)) < tol*pow(10,2)){
+        if(sqrt(pow(B[0],2)+pow(B[1],2)) < tol*pow(10,3)){
             //printf and break
-            printf("Shooting iteration: %ud,\nAlpha: %.3f,\nX(0)=%.3e,\nY(0)=%.3e,\nDiscrepancy: %.3e\n", iteration, mult,alpha_1,alpha_2,sqrt(pow(B[0],2)+pow(B[1],2)));
-            break;
+            printf("Shooting iteration: %ud,\nAlpha: %.3f,\nX(0)=%.14f,\nY(0)=%.14f,\nDiscrepancy: %.3e\n\n", iteration, mult,alpha_1,alpha_2,sqrt(pow(B[0],2)+pow(B[1],2)));
+
+            free (A[0]);
+            free (A[1]);
+            free (A);
+            free (B);
+            
+            return;
         }
         
-        printf("Shooting iteration: %ud,\nAlpha: %.3f,\nX(0)=%.3e,\nY(0)=%.3e,\nDiscrepancy: %.3e\n\n", iteration, mult,alpha_1,alpha_2,sqrt(pow(B[0],2)+pow(B[1],2)));
+        // printf("Shooting iteration: %ud,\nAlpha: %.3f,\nX(0)=%.3e,\nY(0)=%.3e,\nDiscrepancy: %.3e\n\n", iteration, mult,alpha_1,alpha_2,sqrt(pow(B[0],2)+pow(B[1],2)));
 
-        alpha_1 += (A[0][0]*B[0]-A[1][0]*B[1])/(A[1][0]*A[0][1]-A[0][0]*A[1][1]);
+        alpha_1 -= (A[0][0]*B[0]-A[1][0]*B[1])/(A[1][0]*A[0][1]-A[0][0]*A[1][1]);
         alpha_2 += (A[0][0]*B[1]-A[1][0]*B[0])/(A[1][0]*A[0][1]-A[0][0]*A[1][1]);
                 
         //changing alpha_1, alpha_2
@@ -487,15 +494,16 @@ int main()
     ///////////////////////////////////////////////////////////////////////////////////////// 
     
     // the shooting method
-	astep(2*pi*pow(10,3), &x, &y, &px, &py, &x_, &y_, &px_, &py_, &i, &j, p, s, k, cab, tol, test_x_d, test_y_d, test_px_d, test_py_d, 0);
-    printf("The Runge-Kutta test:\n%.2e    %.2e  |  %.2e    %.2e\n\n",x-cos(0),y-sin(0),px-cos(0),py-sin(0));
-    x=1;
+	astep(pi*pow(10,3), &x, &y, &px, &py, &x_, &y_, &px_, &py_, &i, &j, p, s, k, cab, tol, test_x_d, test_y_d, test_px_d, test_py_d, 0);
+    printf("The Runge-Kutta test:\n%.2e    %.2e  |  %.2e    %.2e  |  10^3*Pi\n\n",x-1,y,px-1,py);
+    
+	x=1;
 	y=0;
 	px=1;
 	py=0;
     
-    for(unsigned int l = 0; l < 1; l++)
-        shooting_method(50, T, x, py, alpha, p, s, k, cab, tol, x_d, y_d, px_d, py_d, mult[l]);
+    for(unsigned int l = 0; l < 4; l++)
+        shooting_method(1500, T, x, py, alpha, p, s, k, cab, tol, x_d, y_d, px_d, py_d, mult[l]);
 
     /////////////////////////////////////////////////////////////////////////////////////////
 
