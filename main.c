@@ -3,6 +3,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <time.h>
+#define pi 3.14159265359
 
 _Pragma ("GCC diagnostic push")
 _Pragma ("GCC diagnostic ignored \"-Wunused-parameter\"")
@@ -24,6 +25,26 @@ static double px_d(double t, double x, double y, double p_x, double p_y, double 
 static double py_d (double t, double x, double y, double p_x, double p_y, double mult)
 {
     return -p_x;
+}
+
+static double test_x_d  (double t, double x, double y, double p_x, double p_y, double mult)        
+{
+    return -y;
+}
+
+static double test_y_d (double t, double x, double y, double p_x, double p_y, double mult)
+{
+    return x;
+}
+
+static double test_px_d(double t, double x, double y, double p_x, double p_y, double mult)
+{
+    return -p_y;
+}
+
+static double test_py_d (double t, double x, double y, double p_x, double p_y, double mult)
+{
+    return p_x;
 }
 
 _Pragma ("GCC diagnostic pop")
@@ -180,7 +201,7 @@ double astep (double T,
     err         = 0;
     norm        = 0;
 	
-    printf("%.2e    %.6e  |  %.6e    %.2e\n", *x, *y, *px, *py);
+    // printf("%.2e    %.6e  |  %.6e    %.2e\n", *x, *y, *px, *py);
 	
     for (*i = *j = 0; T - dist > pow(10,-17);)
     {   
@@ -304,8 +325,8 @@ void shooting_method(unsigned int max_iterations,
 	                 double v (double, double, double, double, double, double),
                      double mult)
 {
-    double alpha_1 = 1; //x
-    double alpha_2 = 1; //py
+    double alpha_1 = 1.5; //x
+    double alpha_2 = -0.5; //py
     double** A = (double**)malloc (2*sizeof(double*));
     A[0] = (double*)malloc (2*sizeof(double));
     A[1] = (double*)malloc (2*sizeof(double));
@@ -318,8 +339,8 @@ void shooting_method(unsigned int max_iterations,
         temp_alpha[0] = err[0];  // y
         temp_alpha[1] = err[1];  // px
         error(T, x, alpha_1-delta, alpha_2, py, err, p, s, k, cab, tol, f, g, u, v, mult);
-        printf("\n%.7e    %.7e    %.7e\n",temp_alpha[0], err[0], (temp_alpha[0]-err[0])/delta);
-        printf("%.7e    %.7e    %.7e\n\n",temp_alpha[1], err[1], (temp_alpha[1]-err[1])/delta);
+        // printf("\n%.7e    %.7e    %.7e\n",temp_alpha[0], err[0], (temp_alpha[0]-err[0])/delta);
+        // printf("%.7e    %.7e    %.7e\n\n",temp_alpha[1], err[1], (temp_alpha[1]-err[1])/delta);
         A[0][0] = (temp_alpha[0]-err[0])*(0.5/delta);
         A[1][0] = (temp_alpha[1]-err[1])*(0.5/delta);
 
@@ -358,14 +379,19 @@ void shooting_method(unsigned int max_iterations,
 int main()
 {
     double T             = 1;
-    double tol           = pow (10, -7);
+    double tol           = pow (10, -17);
     long long unsigned i = 0;
     long long unsigned j = 0;
 
     double x=1;
-	//double y;
-	//double px;
+	double y=0;
+	double px=1;
 	double py=0;
+    
+    double x_;
+	double y_;
+	double px_;
+	double py_;
 	
     double*  mult; // alpha из условия
     double* alpha; // под невязки
@@ -461,9 +487,15 @@ int main()
     ///////////////////////////////////////////////////////////////////////////////////////// 
     
     // the shooting method
-	
+	astep(2*pi*pow(10,3), &x, &y, &px, &py, &x_, &y_, &px_, &py_, &i, &j, p, s, k, cab, tol, test_x_d, test_y_d, test_px_d, test_py_d, 0);
+    printf("The Runge-Kutta test:\n%.2e    %.2e  |  %.2e    %.2e\n\n",x-cos(0),y-sin(0),px-cos(0),py-sin(0));
+    x=1;
+	y=0;
+	px=1;
+	py=0;
+    
     for(unsigned int l = 0; l < 1; l++)
-        shooting_method(200, T, x, py, alpha, p, s, k, cab, tol, x_d, y_d, px_d, py_d, mult[l]);
+        shooting_method(50, T, x, py, alpha, p, s, k, cab, tol, x_d, y_d, px_d, py_d, mult[l]);
 
     /////////////////////////////////////////////////////////////////////////////////////////
 
