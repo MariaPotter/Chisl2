@@ -4,6 +4,7 @@
 #include <stdlib.h>
 #include <time.h>
 #define pi 3.14159265358979323846264338328
+#define EPS pow(10,-15)
 
 _Pragma ("GCC diagnostic push")
 _Pragma ("GCC diagnostic ignored \"-Wunused-parameter\"")
@@ -232,7 +233,7 @@ double astep (double T,
 	
     // printf("%.2e    %.6e  |  %.6e    %.2e\n", *x, *y, *px, *py);
 	
-    for (*i = *j = 0; T - dist > tol*pow(10,-2);)
+    for (*i = *j = 0; T - dist > EPS;)
     {   
         
         if (dist + h > T) h = T - dist;
@@ -251,7 +252,7 @@ double astep (double T,
         if (h < pow (10, -18))
         {
             printf ("\nSomething goes wrong...\n");
-            return 0;
+            return -1000000;
         }
         if (norm > tol)
         {
@@ -306,7 +307,8 @@ double error(double T,
 	long long unsigned i = 0;
 	long long unsigned j = 0;
 
-	astep(T, &x, &y, &px, &py, &b, &i, &j, p, s, k, cab, tol, f, g, u, v, l, mult);
+	if(astep(T, &x, &y, &px, &py, &b, &i, &j, p, s, k, cab, tol, f, g, u, v, l, mult) + 1000000 < EPS)
+        return -1000000;
 
 	err[0] = x-0;//
 	err[1] = py-0;
@@ -334,11 +336,11 @@ double fedorenko_norm(double** A, double* B) {
 */   
 
 // the shooting method
-void shooting_method(unsigned int max_iterations,
+int shooting_method(unsigned int max_iterations,
                      double T,
 	                 double y,
 	                 double px,
-	                 double* err,
+	                 double* alpha,
 	                 unsigned int p,
 	                 unsigned int s,
 
@@ -354,66 +356,150 @@ void shooting_method(unsigned int max_iterations,
 	                 double l (double, double, double, double, double, double),
                      double mult)
 {
-    double alpha_1 = -1.5; //x
-    double alpha_2 = -0.5; //py
+    double alpha_1; //x
+    double alpha_2; //py
     double** A = (double**)malloc (2*sizeof(double*));
     A[0] = (double*)malloc (2*sizeof(double));
     A[1] = (double*)malloc (2*sizeof(double));
     double* B = (double*)malloc (2*sizeof(double));
+	double* err = (double*)malloc (2*sizeof(double));
+    err[0] = 0;
+    err[1] = 0;
     double delta = pow(10, -6);
-    double integral = 0;
+    double step_m = pow(10, -2);
+    double step_T = pow(10, -2);
+    double integral;
+    for(;1;){
+        integral = 0;
+        alpha_1 = alpha[2]; //x
+        alpha_2 = alpha[3]; //py
+         // printf("mult_0=%13.7e  |  mult_k=%13.7e  |  mult=%13.7e  |  T_0=%13.7e  |  T_k=%13.7e  |  T=%13.7e  |  step_m=%13.7e  |  step_T=%13.7e\n",alpha[0], alpha[4], mult, alpha[1], alpha[5], T, step_m, step_T);
 
-    for(unsigned int iteration = 0; iteration < max_iterations; iteration++){
-        error(T, alpha_1+delta, y, px, alpha_2, integral, err, p, s, k, cab, tol, f, g, u, v, l, mult);
-        B[0] = err[0];  // x
-        B[1] = err[1];  // py
-        error(T, alpha_1-delta, y, px, alpha_2, integral, err, p, s, k, cab, tol, f, g, u, v, l, mult);
-        // printf("\n%.7e    %.7e    %.7e\n",B[0], err[0], (B[0]-err[0])/delta);
-        // printf("%.7e    %.7e    %.7e\n\n",B[1], err[1], (B[1]-err[1])/delta);
-        A[0][0] = (B[0]-err[0])/(2*delta);
-        A[1][0] = (B[1]-err[1])/(2*delta);
-
-        error(T, alpha_1, y, px, alpha_2+delta, integral, err, p, s, k, cab, tol, f, g, u, v, l, mult);
-        B[0] = err[0];  // x
-        B[1] = err[1];  // py
-        error(T, alpha_1, y, px, alpha_2-delta, integral, err, p, s, k, cab, tol, f, g, u, v, l, mult);
-        A[0][1] = (B[0]-err[0])/(2*delta);
-        A[1][1] = (B[1]-err[1])/(2*delta);
-
-        integral = error(T, alpha_1, y, px, alpha_2, integral, err, p, s, k, cab, tol, f, g, u, v, l, mult);
-        B[0] = err[0];  //x
-        B[1] = err[1];  //py
-        
-        // printf("%10.2e    %10.2e  |  %10.2e\n%10.2e    %10.2e  |  %10.2e\n", A[0][0], A[0][1], B[0], A[1][0], A[1][1], B[1]);
-        
-        if(sqrt(pow(B[0],2)+pow(B[1],2)) < tol*pow(10,2)){
-            //printf and break
-            printf("Shooting iteration: %u,\nAlpha: %.3f,\nX(0)=%.14f,\nPy(0)=%.14f,\nB=%.14f,\nDiscrepancy: %.3e\n\n", iteration, mult, alpha_1, alpha_2, integral, sqrt(pow(B[0], 2) + pow(B[1], 2)));
-
-            free (A[0]);
-            free (A[1]);
-            free (A);
-            free (B);
+        for(unsigned int iteration = 0; ; iteration++){
+            // printf("T=%14.7e  |  X(0)=%14.7e  |  Py(0)=%14.7e  | Mult=%14.7e\n",alpha[5], alpha_1, alpha_2, alpha[4]);
+            if(iteration == max_iterations)
+            {
+                printf("Newton's method does not converge!\n");
+    
+                free (A[0]);
+                free (A[1]);
+                free (A);
+                free (B);
+                free (err);
+                
+                return -1;
+            }
+            if(error(alpha[5], alpha_1+delta, y, px, alpha_2, integral, err, p, s, k, cab, tol, f, g, u, v, l, alpha[4]) + 1000000 < EPS){
+                if(fabs(alpha[4] - (alpha[0] + step_m)) < EPS)
+                    step_m *= 0.1;
+                if(fabs(alpha[5] - (alpha[1] + step_T)) < EPS)
+                    step_T *= 0.1;
+                break;
+            }
             
-            return;
+            B[0] = err[0];  // x
+            B[1] = err[1];  // py
+            
+            if(error(alpha[5], alpha_1-delta, y, px, alpha_2, integral, err, p, s, k, cab, tol, f, g, u, v, l, alpha[4]) + 1000000 < EPS){
+                if(fabs(alpha[4] - (alpha[0] + step_m)) < EPS)
+                    step_m *= 0.1;
+                if(fabs(alpha[5] - (alpha[1] + step_T)) < EPS)
+                    step_T *= 0.1;
+                break;
+            }
+            
+            // printf("\n%.7e    %.7e    %.7e\n",B[0], err[0], (B[0]-err[0])/delta);
+            // printf("%.7e    %.7e    %.7e\n\n",B[1], err[1], (B[1]-err[1])/delta);
+            A[0][0] = (B[0]-err[0])/(2*delta);
+            A[1][0] = (B[1]-err[1])/(2*delta);
+
+            if(error(alpha[5], alpha_1, y, px, alpha_2+delta, integral, err, p, s, k, cab, tol, f, g, u, v, l, alpha[4]) + 1000000 < EPS){
+                if(fabs(alpha[4] - (alpha[0] + step_m)) < EPS)
+                    step_m *= 0.1;
+                if(fabs(alpha[5] - (alpha[1] + step_T)) < EPS)
+                    step_T *= 0.1;
+                break;
+            }
+            
+            B[0] = err[0];  // x
+            B[1] = err[1];  // py
+            
+            if(error(alpha[5], alpha_1, y, px, alpha_2-delta, integral, err, p, s, k, cab, tol, f, g, u, v, l, alpha[4]) + 1000000 < EPS){
+                if(fabs(alpha[4] - (alpha[0] + step_m)) < EPS)
+                    step_m *= 0.1;
+                if(fabs(alpha[5] - (alpha[1] + step_T)) < EPS)
+                    step_T *= 0.1;
+                break;
+            }
+            
+            A[0][1] = (B[0]-err[0])/(2*delta);
+            A[1][1] = (B[1]-err[1])/(2*delta);
+
+            integral = error(alpha[5], alpha_1, y, px, alpha_2, integral, err, p, s, k, cab, tol, f, g, u, v, l, alpha[4]);
+            if(integral + 1000000 < EPS){
+                if(fabs(alpha[4] - (alpha[0] + step_m)) < EPS)
+                    step_m *= 0.1;
+                if(fabs(alpha[5] - (alpha[1] + step_T)) < EPS)
+                    step_T *= 0.1;
+                break;
+            }
+            
+            B[0] = err[0];  //x
+            B[1] = err[1];  //py
+
+            // printf("%10.2e    %10.2e  |  %10.2e\n%10.2e    %10.2e  |  %10.2e\n", A[0][0], A[0][1], B[0], A[1][0], A[1][1], B[1]);
+
+            if(sqrt(pow(B[0],2)+pow(B[1],2)) < tol*pow(10, 7)){
+                //printf and break
+                printf("Shooting iteration: %u,\nAlpha: %.4f,\nX(0)=%.14f,\nPy(0)=%.14f,\nB=%.14f,\nDiscrepancy: %.3e\n\n", iteration, alpha[4], alpha_1, alpha_2, integral, sqrt(pow(B[0], 2) + pow(B[1], 2)));
+
+                iteration = 0;
+                alpha[0] = alpha[4];
+                alpha[1] = alpha[5];
+                alpha[2] = alpha_1;
+                alpha[3] = alpha_2;
+
+                break;
+            }
+
+            // printf("Shooting iteration: %ud,\nAlpha: %.3f,\nX(0)=%.3e,\nY(0)=%.3e,\nDiscrepancy: %.3e\n\n", iteration, mult,alpha_1,alpha_2,sqrt(pow(B[0],2)+pow(B[1],2)));
+
+            alpha_1 -= (A[0][0]*B[0]-A[1][0]*B[1])/(A[1][0]*A[0][1]-A[0][0]*A[1][1]);
+            alpha_2 += (A[0][0]*B[1]-A[1][0]*B[0])/(A[1][0]*A[0][1]-A[0][0]*A[1][1]);
+            integral = 0;
         }
         
-        // printf("Shooting iteration: %ud,\nAlpha: %.3f,\nX(0)=%.3e,\nY(0)=%.3e,\nDiscrepancy: %.3e\n\n", iteration, mult,alpha_1,alpha_2,sqrt(pow(B[0],2)+pow(B[1],2)));
-
-        alpha_1 -= (A[0][0]*B[0]-A[1][0]*B[1])/(A[1][0]*A[0][1]-A[0][0]*A[1][1]);
-        alpha_2 += (A[0][0]*B[1]-A[1][0]*B[0])/(A[1][0]*A[0][1]-A[0][0]*A[1][1]);
-        integral = 0;
+        if(fabs(alpha[0] - alpha[4]) < EPS && fabs(alpha[1] - alpha[5]) < EPS )
+        {
+            step_m *= 1.1;
+            step_T *= 1.1;
+            if(mult - alpha[4] < step_m)
+                step_m = mult - alpha[4];
+            
+            if(T - alpha[5] < step_T)
+                step_T = T - alpha[5];
+        }
+        
+        alpha[4] = alpha[0] + step_m;
+        alpha[5] = alpha[1] + step_T;
+        
+        if(fabs(alpha[0] - mult) < EPS && fabs(alpha[1] - T) < EPS)
+            break;
     }
+    
     free (A[0]);
     free (A[1]);
     free (A);
     free (B);
+    free (err);
+    
+    return 0;
 }
 
 int main()
 {
     double T             = 1;
-    double tol           = pow (10, -17);
+    double tol           = pow (10, -15);
     long long unsigned i = 0;
     long long unsigned j = 0;
 
@@ -472,9 +558,11 @@ int main()
     mult[2] = 0.1;
     mult[3] = 1;
 
-	alpha = (double*)malloc (2 * sizeof (double));
-    alpha[0] = 0;
-    alpha[1] = 0;
+	alpha = (double*)malloc (6 * sizeof (double));
+    alpha[0] = mult[0];
+    alpha[1] = T;
+    alpha[2] = 5.;
+    alpha[3] = -12.;
 
     k    = (double**)malloc (5 * sizeof (double*));
     k[0] = (double*)malloc (s * sizeof (double));
@@ -527,8 +615,13 @@ int main()
 	px=0;
 	// py=0;
     
-    for(unsigned int l = 0; l < 4; l++)
-        shooting_method(1500, T, y, px, alpha, p, s, k, cab, tol, x_d, y_d, px_d, py_d, B_d, mult[l]);
+    for(unsigned int l = 0; l < 4; l++){
+        alpha[4] = mult[l];
+        alpha[5] = T;
+        
+        if(shooting_method(1500, T, y, px, alpha, p, s, k, cab, tol, x_d, y_d, px_d, py_d, B_d, mult[l]) == -1)
+            break;
+    }
 
     /////////////////////////////////////////////////////////////////////////////////////////
 
