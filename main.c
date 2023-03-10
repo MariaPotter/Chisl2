@@ -622,6 +622,7 @@ int shooting_method(unsigned int max_iterations,
                 free (A[0]);
                 free (A[1]);
                 free (A);
+                free (newton);
                 free (B);
                 free (err);
                 
@@ -633,6 +634,7 @@ int shooting_method(unsigned int max_iterations,
     free (A[0]);
     free (A[1]);
     free (A);
+    free (newton);
     free (B);
     free (err);
     
@@ -832,6 +834,7 @@ int main()
     free (k[1]);
 	free (k[2]);
     free (k[3]);
+    free (k[4]);
     free (k);
 
     time (&end);
