@@ -551,7 +551,7 @@ int shooting_method(unsigned int max_iterations,
             // printf("%10.2e    %10.2e  |  %10.2e\n%10.2e    %10.2e  |  %10.2e\n", A[0][0], A[0][1], B[0], A[1][0], A[1][1], B[1]);
             
             B[5] = sqrt(pow(B[0],2)+pow(B[1],2));
-            if(B[5] < tol*pow(10, 5)){
+            if(B[5] < tol*pow(10, 3)){
                 // printf and break
                 // printf("Shooting iteration: %u,\nAlpha: %.4f,\nDistance: %.4f,\nY(0) = %.14f,\nPx(0) = %.14f,\nB = %.14f,\nDiscrepancy: %.3e\n\n", iteration, alpha[4], alpha[5], alpha_1, alpha_2, integral, sqrt(pow(B[0], 2) + pow(B[1], 2)));
                 
@@ -641,7 +641,7 @@ int shooting_method(unsigned int max_iterations,
 
 int main()
 {
-    double tol           = pow (10, -15);
+    double tol           = pow (10, -17);
     long long unsigned i = 0;
     long long unsigned j = 0;
 
